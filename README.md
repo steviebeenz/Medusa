@@ -1,7 +1,9 @@
 # Medusa Anticheat
 
-Free and open-source anticheat designed for Spigot servers using 1.7x-1.8x versions. Previously known as Luna.
+Anticheat for Spigot (and *some* related forks) servers.
 
-Contributors:
-https://github.com/GladUrBad/Medusa/graphs/contributors
+Supports 1.7/1.8 primarily, 1.9-1.12 support is experimental and will be fully implemented soon.
 
+https://www.spigotmc.org/resources/medusa-anticheat-fast-and-reliable-detections-3-2-reach-detection.83345/
+
+https://www.mc-market.org/resources/18684/

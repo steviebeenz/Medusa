@@ -14,6 +14,8 @@ import com.gladurbad.medusa.packet.processor.ReceivingPacketProcessor;
 import com.gladurbad.medusa.packet.processor.SendingPacketProcessor;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.messaging.Messenger;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Getter
 public enum Medusa {
@@ -29,6 +31,7 @@ public enum Medusa {
     private final SendingPacketProcessor sendingPacketProcessor = new SendingPacketProcessor();
     private final PlayerDataManager playerDataManager = new PlayerDataManager();
     private final CommandManager commandManager = new CommandManager(this.getPlugin());
+    private final ExecutorService packetExecutor = Executors.newSingleThreadExecutor();
 
     public void start(final MedusaPlugin plugin) {
         this.plugin = plugin;
@@ -54,17 +57,9 @@ public enum Medusa {
 
         Bukkit.getServer().getPluginManager().registerEvents(new BukkitEventListener(), plugin);
         Bukkit.getServer().getPluginManager().registerEvents(new ClientBrandListener(), plugin);
+        Bukkit.getServer().getPluginManager().registerEvents(new JoinQuitListener(), plugin);
 
-        PacketEvents.getSettings()
-                .injectAsync(true)
-                .ejectAsync(true)
-                .injectEarly(true)
-                .packetHandlingThreadCount(1)
-                .checkForUpdates(true)
-                .backupServerVersion(ServerVersion.v_1_8_8);
-
-        PacketEvents.getAPI().getEventManager().registerListener(new NetworkListener());
-        PacketEvents.getAPI().getEventManager().registerListener(new JoinQuitListener());
+        PacketEvents.get().registerListener(new NetworkListener());
     }
 
     public void stop(final MedusaPlugin plugin) {

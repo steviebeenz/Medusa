@@ -7,14 +7,15 @@ import lombok.experimental.UtilityClass;
 import org.bukkit.Bukkit;
 
 @UtilityClass
-public class PunishUtil {
+public final class PunishUtil {
 
     public void punish(final Check check, final PlayerData data) {
         if (!check.getPunishCommand().isEmpty()) {
             Bukkit.getScheduler().runTask(Medusa.INSTANCE.getPlugin(), () ->
                     Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), check.getPunishCommand()
-                            .replace("%player%", data.getPlayer().getName())
-                            .replace("%check%", check.getCheckInfo().name())));
+                            .replaceAll("%player%", data.getPlayer().getName())
+                            .replaceAll("%checkName%", check.getJustTheName())
+                            .replaceAll("%checkType", String.valueOf(check.getType()))));
         }
     }
 }

@@ -1,17 +1,18 @@
 package com.gladurbad.medusa.check.impl.combat.aimassist;
 
+import com.gladurbad.api.check.CheckInfo;
 import com.gladurbad.medusa.check.Check;
-import com.gladurbad.medusa.check.CheckInfo;
 import com.gladurbad.medusa.data.PlayerData;
 import com.gladurbad.medusa.exempt.type.ExemptType;
 import com.gladurbad.medusa.packet.Packet;
+import com.gladurbad.medusa.util.MathUtil;
 
 /**
- * Created 11/14/2020 Package com.gladurbad.medusa.check.impl.combat.aim by GladUrBad
+ * Created 12/06/2020 Package com.gladurbad.medusa.check.impl.combat.aimassist by GladUrBad
  */
 
 @CheckInfo(name = "AimAssist (E)", description = "Checks for a valid sensitivity in the rotation.")
-public class AimAssistE extends Check {
+public final class AimAssistE extends Check {
 
     public AimAssistE(final PlayerData data) {
         super(data);
@@ -20,17 +21,26 @@ public class AimAssistE extends Check {
     @Override
     public void handle(final Packet packet) {
         if (packet.isRotation()) {
-            final int sens = data.getRotationProcessor().getSensitivity();
-            final float yawAccel = data.getRotationProcessor().getYawAccel();
+            final float deltaPitch = data.getRotationProcessor().getDeltaPitch();
+            final float lastDeltaPitch = data.getRotationProcessor().getLastDeltaPitch();
 
-            if (isExempt(ExemptType.COMBAT)) {
-                if (yawAccel > 0.1F && sens < 0) {
-                    if (increaseBuffer() > 10) {
-                        fail("sens=" + sens + " yawAccel=" + yawAccel + " buffer=" + getBuffer());
-                    }
-                } else {
-                    decreaseBufferBy(0.75);
+            final long expandedDeltaPitch = (long) (deltaPitch * MathUtil.EXPANDER);
+            final long expandedLastDeltaPitch = (long) (lastDeltaPitch * MathUtil.EXPANDER);
+
+            final long gcd = MathUtil.getGcd(expandedDeltaPitch, expandedLastDeltaPitch);
+
+            final boolean exempt = deltaPitch == 0
+                    || lastDeltaPitch == 0
+                    || isExempt(ExemptType.CINEMATIC);
+
+            debug("gcd=" + gcd + " cinematic=" + isExempt(ExemptType.CINEMATIC) + " buf=" + buffer);
+
+            if (!exempt && gcd < 131072L) {
+                if (++buffer > 10) {
+                    fail("gcd=" + gcd + " buffer=" + buffer);
                 }
+            } else {
+                buffer = Math.max(0, buffer - 1);
             }
         }
     }

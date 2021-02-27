@@ -1,14 +1,18 @@
 package com.gladurbad.medusa.check.impl.movement.motion;
 
 import com.gladurbad.medusa.check.Check;
-import com.gladurbad.medusa.check.CheckInfo;
+import com.gladurbad.api.check.CheckInfo;
 import com.gladurbad.medusa.data.PlayerData;
+import com.gladurbad.medusa.exempt.type.ExemptType;
 import com.gladurbad.medusa.packet.Packet;
-import io.github.retrooper.packetevents.packettype.PacketType;
 import org.bukkit.util.Vector;
 
+/**
+ * Created on 11/17/2020 Package com.gladurbad.medusa.check.impl.movement.motion by GladUrBad
+ */
+
 @CheckInfo(name = "Motion (D)", description = "Checks for sprint direction.")
-public class MotionD extends Check {
+public final class MotionD extends Check {
 
     private int teleportTicks;
     private int offGroundTicks;
@@ -43,17 +47,19 @@ public class MotionD extends Check {
 
                 final double angle = Math.toDegrees(positionDifference.angle(direction));
 
-                final boolean invalid = !data.getPositionProcessor().isInLiquid() &&
-                        angle > 85 &&
-                        data.getPositionProcessor().getDeltaXZ() > 0.25 &&
-                        offGroundTicks < 8;
+                final boolean invalid = !data.getPositionProcessor().isInLiquid()
+                        && angle > 85
+                        && data.getPositionProcessor().getDeltaXZ() > 0.25
+                        && offGroundTicks < 8
+                        && !isExempt(ExemptType.TELEPORT, ExemptType.VELOCITY);
 
+                debug("angle=" + angle + " dxz=" + data.getPositionProcessor().getDeltaXZ() + " buffer=" + buffer);
                 if (invalid) {
-                    if (increaseBuffer() >= 4) {
-                        fail("angle (deg)=" + angle + " buffer=" + getBuffer());
+                    if (++buffer >= 8) {
+                        fail(String.format("angle=%.2f, buffer=%.2f", angle, buffer));
                     }
                 } else {
-                    decreaseBufferBy(0.25);
+                    buffer = Math.max(buffer - 0.5, 0);
                 }
             }
         } else if (packet.isTeleport()) {

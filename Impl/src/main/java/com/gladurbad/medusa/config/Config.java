@@ -1,17 +1,14 @@
 package com.gladurbad.medusa.config;
 
+import com.gladurbad.api.check.CheckInfo;
 import com.gladurbad.medusa.Medusa;
-import com.gladurbad.medusa.check.CheckInfo;
 import com.gladurbad.medusa.manager.CheckManager;
-import com.gladurbad.medusa.util.ColorUtil;
-import lombok.Setter;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 
 import java.lang.reflect.Field;
 import java.util.*;
 
-public class Config {
+public final class Config {
 
     //Make this an enum, please just rewrite it.
     //Appearance stuff
@@ -22,12 +19,12 @@ public class Config {
     //Violations stuff
     public static String ALERT_FORMAT;
     public static long ALERT_COOLDOWN;
+    public static long SETBACK_COOLDOWN;
     public static int MIN_VL_TO_ALERT;
     public static int CLEAR_VIOLATIONS_DELAY;
 
     //Checks stuff
     public static List<String> ENABLED_CHECKS = new ArrayList<>();
-    public static List<String> SETBACK_CHECKS = new ArrayList<>();
     public static Map<String, Integer> MAX_VIOLATIONS = new HashMap<>();
     public static Map<String, String> PUNISH_COMMANDS = new HashMap<>();
 
@@ -38,6 +35,7 @@ public class Config {
             THEMES = getStringListFromConfig("appearance.themes");
             ACCENT_ONE = getStringFromConfig("appearance.accents.accentOne");
             ACCENT_TWO = getStringFromConfig("appearance.accents.accentTwo");
+            SETBACK_COOLDOWN = getLongFromConfig("checks.movement.setback-cooldown");
 
             //Violations
             ALERT_FORMAT = getStringFromConfig("violations.alert-format");
@@ -73,7 +71,7 @@ public class Config {
                                 value.setValue(getIntegerFromConfig("checks." + checkType + "." + getPathFromCheckName(checkInfo.name()) + "." + name));
                                 break;
                             case DOUBLE:
-                                value.setValue(getDoubleFromConfig("checks." + checkType + "." + getPathFromCheckName(checkInfo.name())) + "." + name);
+                                value.setValue(getDoubleFromConfig("checks." + checkType + "." + getPathFromCheckName(checkInfo.name()) + "." + name));
                                 break;
                             case STRING:
                                 value.setValue(getStringFromConfig("checks." + checkType + "." + getPathFromCheckName(checkInfo.name()) + "." + name));
@@ -90,16 +88,10 @@ public class Config {
                 final int maxViolations = getIntegerFromConfig("checks." + checkType + "." + getPathFromCheckName(checkInfo.name()) + ".max-violations");
                 final String punishCommand = getStringFromConfig("checks." + checkType + "." + getPathFromCheckName(checkInfo.name()) + ".punish-command");
 
-                if (checkType.equals("movement")) {
-                    final boolean setBack = getBooleanFromConfig("checks.movement." + getPathFromCheckName(checkInfo.name()) + ".setback");
-                    if (setBack) {
-                        SETBACK_CHECKS.add(check.getSimpleName());
-                    }
-                }
-
                 if (enabled) {
                     ENABLED_CHECKS.add(check.getSimpleName());
                 }
+
                 MAX_VIOLATIONS.put(check.getSimpleName(), maxViolations);
                 PUNISH_COMMANDS.put(check.getSimpleName(), punishCommand);
             }
@@ -122,7 +114,7 @@ public class Config {
         return Medusa.INSTANCE.getPlugin().getConfig().getInt(string);
     }
 
-    private static double getDoubleFromConfig(String string) {
+    public static double getDoubleFromConfig(String string) {
         return Medusa.INSTANCE.getPlugin().getConfig().getDouble(string);
     }
 
@@ -134,7 +126,7 @@ public class Config {
         return Medusa.INSTANCE.getPlugin().getConfig().getLong(string);
     }
 
-    private static String getPathFromCheckName(String name) {
+    public static String getPathFromCheckName(String name) {
         return name.toLowerCase().replaceFirst("[(]", ".").replaceAll("[ ()]", "");
     }
 }

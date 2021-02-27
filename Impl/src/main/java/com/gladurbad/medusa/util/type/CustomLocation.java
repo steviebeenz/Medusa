@@ -8,7 +8,7 @@ import org.bukkit.util.Vector;
 
 @Getter
 @Setter
-public class CustomLocation {
+public final class CustomLocation {
 
     private World world;
     private double x, y, z;
@@ -24,7 +24,7 @@ public class CustomLocation {
         this.yaw = yaw;
         this.pitch = pitch;
         this.onGround = onGround;
-        this.timeStamp = System.nanoTime() / 10000;
+        this.timeStamp = System.currentTimeMillis();
     }
 
     public Vector toVector() {

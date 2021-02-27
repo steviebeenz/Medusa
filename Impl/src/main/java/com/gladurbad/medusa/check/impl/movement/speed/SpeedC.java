@@ -1,13 +1,15 @@
 package com.gladurbad.medusa.check.impl.movement.speed;
 
+import com.gladurbad.api.check.CheckInfo;
 import com.gladurbad.medusa.check.Check;
-import com.gladurbad.medusa.check.CheckInfo;
 import com.gladurbad.medusa.data.PlayerData;
 import com.gladurbad.medusa.exempt.type.ExemptType;
 import com.gladurbad.medusa.packet.Packet;
+import com.gladurbad.medusa.util.PlayerUtil;
+import org.bukkit.potion.PotionEffectType;
 
-@CheckInfo(name = "Speed (C)", description = "Checks for switching direction mid-air.", experimental = true)
-public class SpeedC extends Check {
+@CheckInfo(name = "Speed (C)", description = "Basic verbose speed check.", experimental = true)
+public final class SpeedC extends Check {
 
     public SpeedC(final PlayerData data) {
         super(data);
@@ -16,39 +18,33 @@ public class SpeedC extends Check {
     @Override
     public void handle(final Packet packet) {
         if (packet.isPosition()) {
-            final double deltaX = data.getPositionProcessor().getDeltaX();
-            final double lastDeltaX = data.getPositionProcessor().getLastDeltaX();
-            final double deltaZ = data.getPositionProcessor().getDeltaZ();
-            final double lastDeltaZ = data.getPositionProcessor().getLastDeltaZ();
+            final double deltaXZ = data.getPositionProcessor().getDeltaXZ();
 
-            final double absDeltaX = Math.abs(deltaX);
-            final double absDeltaZ = Math.abs(deltaZ);
-            final double absLastDeltaX = Math.abs(lastDeltaX);
-            final double absLastDeltaZ = Math.abs(lastDeltaZ);
+            final double maxSpeed = getSpeed(0.4);
 
-            if (data.getPositionProcessor().getAirTicks() > 2 && !isExempt(ExemptType.VELOCITY)) {
-                final boolean xSwitched = (deltaX > 0 && lastDeltaX < 0) || (deltaX < 0 && lastDeltaX > 0);
-                final boolean zSwitched = (deltaZ > 0 && lastDeltaZ < 0) || (deltaZ < 0 && lastDeltaZ > 0);
+            final boolean exempt = isExempt(
+                    ExemptType.TELEPORT, ExemptType.JOINED, ExemptType.PISTON, ExemptType.VELOCITY,
+                    ExemptType.INSIDE_VEHICLE, ExemptType.FLYING, ExemptType.SLIME, ExemptType.UNDER_BLOCK,
+                    ExemptType.ICE
+            );
 
-                if (xSwitched) {
-                    if (Math.abs(absDeltaX - absLastDeltaX) > 0.05) {
-                        if (increaseBuffer() > 1.25) {
-                            fail("xBuffer=" + getBuffer());
-                        }
-                    }
-                } else {
-                    decreaseBufferBy(0.05);
+            debug("dxz-ms" + (deltaXZ-maxSpeed) + " buffer=" + buffer);
+            if (deltaXZ > maxSpeed && !exempt) {
+                buffer += buffer < 15 ? 1 : 0;
+                if (buffer > 10) {
+                    fail("deltaXZ=" + deltaXZ + " max=" + maxSpeed);
+                    buffer /= 2;
                 }
-                if (zSwitched) {
-                    if (Math.abs(absDeltaZ - absLastDeltaZ) > 0.05) {
-                        if (increaseBuffer() > 1.25) {
-                            fail("zBuffer=" + getBuffer());
-                        }
-                    }
-                } else {
-                    decreaseBufferBy(0.05);
-                }
+            } else {
+                buffer -= buffer > 0 ? 0.25 : 0;
             }
         }
+    }
+
+    private double getSpeed(double movement) {
+        if (PlayerUtil.getPotionLevel(data.getPlayer(), PotionEffectType.SPEED) > 0) {
+            movement *= 1.0D + 0.2D * (double)(PlayerUtil.getPotionLevel(data.getPlayer(), PotionEffectType.SPEED));
+        }
+        return movement;
     }
 }

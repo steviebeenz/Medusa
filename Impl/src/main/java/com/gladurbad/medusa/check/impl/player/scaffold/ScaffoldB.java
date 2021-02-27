@@ -1,16 +1,18 @@
 package com.gladurbad.medusa.check.impl.player.scaffold;
 
+import com.gladurbad.api.check.CheckInfo;
 import com.gladurbad.medusa.check.Check;
-import com.gladurbad.medusa.check.CheckInfo;
 import com.gladurbad.medusa.data.PlayerData;
 import com.gladurbad.medusa.packet.Packet;
+import com.gladurbad.medusa.util.PlayerUtil;
+import io.github.retrooper.packetevents.packetwrappers.play.in.blockplace.WrappedPacketInBlockPlace;
+import org.bukkit.potion.PotionEffectType;
 
-@CheckInfo(name = "Scaffold (B)", description = "Checks for packet order.")
-public class ScaffoldB extends Check {
+@CheckInfo(name = "Scaffold (B)", description = "Checks for tower hacks.", experimental = true)
+public final class ScaffoldB extends Check {
 
-    private long lastBlockPlace;
-    private boolean placedBlock;
-
+    private int movements;
+    private int lastX, lastY, lastZ;
     public ScaffoldB(final PlayerData data) {
         super(data);
     }
@@ -18,22 +20,30 @@ public class ScaffoldB extends Check {
     @Override
     public void handle(final Packet packet) {
         if (packet.isBlockPlace()) {
-            lastBlockPlace = now();
-            placedBlock = true;
-        } else if (packet.isFlying()) {
-            if (placedBlock) {
-                final long delay = now() - lastBlockPlace;
-                final boolean invalid = !data.getActionProcessor().isLagging() && delay > 15;
+            final WrappedPacketInBlockPlace wrapper = new WrappedPacketInBlockPlace(packet.getRawPacket());
 
-                if (invalid) {
-                    if (increaseBuffer() > 2) {
-                        fail("delay=" + delay + " buffer=" + getBuffer());
+            if (PlayerUtil.getPotionLevel(data.getPlayer(), PotionEffectType.JUMP) > 0) return;
+            if (data.getPositionProcessor().getDeltaY() <= 0) return;
+
+            if (!(wrapper.getX() == 1 && wrapper.getY() == 1 && wrapper.getZ() != 1)) {
+                if (data.getPlayer().getItemInHand().getType().isBlock()) {
+                    if (lastX == wrapper.getX() && wrapper.getY() > lastY && lastZ == wrapper.getZ()) {
+                        if (movements < 7) {
+                            if (++buffer > 2) {
+                                fail("ticks=" + movements);
+                            }
+                        } else {
+                            buffer = 0;
+                        }
+                        movements = 0;
                     }
-                } else {
-                    decreaseBufferBy(0.1);
+                    lastX = wrapper.getX();
+                    lastY = wrapper.getY();
+                    lastZ = wrapper.getZ();
                 }
             }
-            placedBlock = false;
+        } else if (packet.isFlying()) {
+            ++movements;
         }
     }
 }

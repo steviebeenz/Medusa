@@ -1,38 +1,78 @@
 package com.gladurbad.medusa.check.impl.player.hand;
 
-import com.gladurbad.medusa.Medusa;
 import com.gladurbad.medusa.check.Check;
-import com.gladurbad.medusa.check.CheckInfo;
+import com.gladurbad.api.check.CheckInfo;
 import com.gladurbad.medusa.data.PlayerData;
 import com.gladurbad.medusa.packet.Packet;
-import org.bukkit.Bukkit;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.util.Vector;
+import io.github.retrooper.packetevents.packetwrappers.play.in.blockplace.WrappedPacketInBlockPlace;
+import io.github.retrooper.packetevents.utils.player.Direction;
+import org.bukkit.Location;
 
-@CheckInfo(name = "Hand (A)", experimental = true, description = "Checks for block interaction reach.")
-public class HandA extends Check implements Listener {
+/**
+ * Created on 1/18/2021 Package com.gladurbad.medusa.check.impl.player.hand by GladUrBad
+ */
 
-    public HandA(PlayerData data) {
+@CheckInfo(name = "Hand (A)", experimental = true, description = "Checks for face occlusion when placing blocks.")
+public final class HandA extends Check {
+
+    public HandA(final PlayerData data) {
         super(data);
-        Bukkit.getPluginManager().registerEvents(this, Medusa.INSTANCE.getPlugin());
     }
 
     @Override
-    public void handle(Packet packet) {
-    }
+    public void handle(final Packet packet) {
+        if (packet.isBlockPlace()) {
+            final WrappedPacketInBlockPlace wrapper = new WrappedPacketInBlockPlace(packet.getRawPacket());
 
-    @EventHandler
-    public void onBlockPlace(BlockPlaceEvent event) {
-        if (event.getPlayer() == data.getPlayer()) {
-            final Vector vec = event.getBlock().getLocation().toVector().setY(0);
-            final Vector playerVec = data.getPlayer().getLocation().toVector().setY(0);
-            final double distance = playerVec.distance(vec) - 0.5;
+            final Direction direction = wrapper.getDirection();
 
-            if (distance > 4.5) {
-                fail("distance=" + distance);
+            final Location blockLocation = new Location(
+                    data.getPlayer().getWorld(),
+                    wrapper.getX(),
+                    wrapper.getY(),
+                    wrapper.getZ()
+            );
+
+            final Location eyeLocation = data.getPlayer().getEyeLocation();
+            final Location blockAgainstLocation = getBlockAgainst(direction, blockLocation);
+
+            final boolean validInteraction = interactedCorrectly(blockAgainstLocation, eyeLocation, direction);
+
+            if (!validInteraction) {
+                assert direction != null;
+                fail("face=" + direction.getValue());
             }
         }
+    }
+
+    private Location getBlockAgainst(final Direction direction, final Location blockLocation) {
+        if (Direction.UP.equals(direction)) {
+            return blockLocation.clone().add(0, -1, 0);
+        } else if (Direction.DOWN.equals(direction)) {
+            return blockLocation.clone().add(0, 1, 0);
+        } else if (Direction.EAST.equals(direction) || Direction.SOUTH.equals(direction)) {
+            return blockLocation;
+        } else if (Direction.WEST.equals(direction)) {
+            return blockLocation.clone().add(1, 0, 0);
+        } else if (Direction.NORTH.equals(direction)) {
+            return blockLocation.clone().add(0, 0, 1);
+        }
+        return null;
+    }
+    private boolean interactedCorrectly(Location block, Location player, Direction face) {
+        if (Direction.UP.equals(face)) {
+            return player.getY() > block.getY();
+        } else if (Direction.DOWN.equals(face)) {
+            return player.getY() < block.getY();
+        } else if (Direction.WEST.equals(face)) {
+            return player.getX() < block.getX();
+        } else if (Direction.EAST.equals(face)) {
+            return player.getX() > block.getX();
+        } else if (Direction.NORTH.equals(face)) {
+            return player.getZ() < block.getZ();
+        } else if (Direction.SOUTH.equals(face)) {
+            return player.getZ() > block.getZ();
+        }
+        return true;
     }
 }

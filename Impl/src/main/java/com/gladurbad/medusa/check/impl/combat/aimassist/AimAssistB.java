@@ -1,7 +1,7 @@
 package com.gladurbad.medusa.check.impl.combat.aimassist;
 
 import com.gladurbad.medusa.check.Check;
-import com.gladurbad.medusa.check.CheckInfo;
+import com.gladurbad.api.check.CheckInfo;
 import com.gladurbad.medusa.data.PlayerData;
 import com.gladurbad.medusa.exempt.type.ExemptType;
 import com.gladurbad.medusa.packet.Packet;
@@ -11,27 +11,31 @@ import com.gladurbad.medusa.packet.Packet;
  */
 
 @CheckInfo(name = "AimAssist (B)", description = "Checks for rounded rotation.")
-public class AimAssistB extends Check {
+public final class AimAssistB extends Check {
 
-    public AimAssistB(PlayerData data) {
+    public AimAssistB(final PlayerData data) {
         super(data);
     }
 
     @Override
-    public void handle(Packet packet) {
+    public void handle(final Packet packet) {
         if (packet.isRotation()) {
-            final float deltaYaw = data.getRotationProcessor().getDeltaYaw();
+            final float deltaYaw = data.getRotationProcessor().getDeltaYaw() % 360F;
             final float deltaPitch = data.getRotationProcessor().getDeltaPitch();
 
-            final boolean invalidPitch = deltaPitch % 1 == 0 && deltaPitch != 0F && !isExempt(ExemptType.TELEPORT);
-            final boolean invalidYaw = deltaYaw % 1 == 0 && deltaYaw != 0F && !isExempt(ExemptType.TELEPORT);
+            final boolean exempt = isExempt(ExemptType.TELEPORT);
 
-            if (invalidPitch || invalidYaw) {
-                if (increaseBuffer() > 2) {
-                    fail("buffer=" + getBuffer());
+            final boolean invalid = !exempt
+                    && (deltaPitch % 1 == 0 || deltaYaw % 1 == 0) && deltaPitch != 0 && deltaYaw != 0;
+
+            debug(String.format("teleport=%b, buffer=%.2f", exempt, buffer));
+
+            if (invalid) {
+                if (++buffer > 4) {
+                    fail(String.format("buffer=%.2f", buffer));
                 }
             } else {
-                decreaseBufferBy(0.1);
+                buffer = Math.max(0, buffer - 0.25);
             }
         }
     }

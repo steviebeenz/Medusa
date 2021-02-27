@@ -2,31 +2,36 @@ package com.gladurbad.medusa.data.processor;
 
 import com.gladurbad.medusa.Medusa;
 import com.gladurbad.medusa.util.MathUtil;
+import com.gladurbad.medusa.util.PlayerUtil;
 import com.gladurbad.medusa.util.type.EvictingList;
-import io.github.retrooper.packetevents.packetwrappers.in.blockdig.WrappedPacketInBlockDig;
-import io.github.retrooper.packetevents.packetwrappers.in.clientcommand.WrappedPacketInClientCommand;
-import io.github.retrooper.packetevents.packetwrappers.in.entityaction.WrappedPacketInEntityAction;
+import io.github.retrooper.packetevents.PacketEvents;
+import io.github.retrooper.packetevents.packetwrappers.play.in.blockdig.WrappedPacketInBlockDig;
+import io.github.retrooper.packetevents.packetwrappers.play.in.clientcommand.WrappedPacketInClientCommand;
+import io.github.retrooper.packetevents.packetwrappers.play.in.entityaction.WrappedPacketInEntityAction;
+import io.github.retrooper.packetevents.packetwrappers.play.in.helditemslot.WrappedPacketInHeldItemSlot;
 import lombok.Getter;
 import com.gladurbad.medusa.data.PlayerData;
+import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 
 @Getter
-public class ActionProcessor {
+public final class ActionProcessor {
 
     private final PlayerData data;
 
     private final EvictingList<Long> flyingSamples = new EvictingList<>(50);
 
     private boolean sprinting, sneaking, sendingAction, placing, digging, blocking,
-            inventory, respawning, sendingDig, lagging;
+            respawning, sendingDig, lagging;
 
-    private int lastDiggingTick, lastPlaceTick, lastBreakTick;
+    @Setter private boolean inventory;
 
-    private int sprintingTicks, sneakingTicks;
+    private int heldItemSlot, lastHeldItemSlot, lastDiggingTick, lastPlaceTick, lastBreakTick,
+            sprintingTicks, sneakingTicks;
 
-    private long lastFlyingTime;
+    private long lastFlyingTime, ping;
 
     public ActionProcessor(final PlayerData data) {
         this.data = data;
@@ -77,6 +82,11 @@ public class ActionProcessor {
         }
     }
 
+    public void handleHeldItemSlot(final WrappedPacketInHeldItemSlot wrapper) {
+        this.lastHeldItemSlot = this.heldItemSlot;
+        this.heldItemSlot = wrapper.getCurrentSelectedSlot();
+    }
+
     public void handleBlockPlace() {
         placing = true;
     }
@@ -86,7 +96,14 @@ public class ActionProcessor {
     }
 
     public void handleArmAnimation() {
-        if (digging) lastDiggingTick = Medusa.INSTANCE.getTickManager().getTicks();
+        /*
+         This can be disabled if the client sends a dig packet then immediately start clicking
+         Which makes it so the player is immune to AutoClicker checks due to his Digging state.
+         Getting the looking block ensures that the player is not spoofing his digging state.
+         */
+        if (digging && PlayerUtil.getLookingBlock(data.getPlayer(), 5) != null) {
+            lastDiggingTick = Medusa.INSTANCE.getTickManager().getTicks();
+        }
     }
 
     public void handleInteract(final PlayerInteractEvent event) {
@@ -110,11 +127,8 @@ public class ActionProcessor {
         placing = false;
         respawning = false;
 
-        if (sprinting) ++sprintingTicks;
-        else sprintingTicks = 0;
-
-        if (sneaking) ++sneakingTicks;
-        else sneakingTicks = 0;
+        sprintingTicks = sprinting ? sprintingTicks + 1 : 0;
+        sneakingTicks = sneaking ? sneakingTicks + 1 : 0;
 
         final long delay = System.currentTimeMillis() - lastFlyingTime;
 
@@ -127,5 +141,6 @@ public class ActionProcessor {
             lagging = deviation > 120;
         }
         lastFlyingTime = System.currentTimeMillis();
+        ping = PacketEvents.get().getPlayerUtils().getPing(data.getPlayer());
     }
 }

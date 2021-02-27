@@ -1,23 +1,21 @@
 package com.gladurbad.medusa.data.processor;
 
 import io.github.retrooper.packetevents.PacketEvents;
-import io.github.retrooper.packetevents.packetwrappers.in.transaction.WrappedPacketInTransaction;
-import io.github.retrooper.packetevents.packetwrappers.out.entityvelocity.WrappedPacketOutEntityVelocity;
-import io.github.retrooper.packetevents.packetwrappers.out.transaction.WrappedPacketOutTransaction;
+import io.github.retrooper.packetevents.packetwrappers.play.in.transaction.WrappedPacketInTransaction;
+import io.github.retrooper.packetevents.packetwrappers.play.out.transaction.WrappedPacketOutTransaction;
 import lombok.Getter;
 import com.gladurbad.medusa.Medusa;
 import com.gladurbad.medusa.data.PlayerData;
 import org.bukkit.Bukkit;
+import org.bukkit.util.Vector;
 
-import java.util.Vector;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Getter
-public class VelocityProcessor {
+public final class VelocityProcessor {
 
     private final PlayerData data;
-    private double velocityX, velocityY, velocityZ;
-    private double lastVelocityX, lastVelocityY, lastVelocityZ;
+    private double velocityX, velocityY, velocityZ, lastVelocityX, lastVelocityY, lastVelocityZ;
     private int maxVelocityTicks, velocityTicks, ticksSinceVelocity;
     private short transactionID, velocityID;
     private long transactionPing, transactionReply;
@@ -40,7 +38,8 @@ public class VelocityProcessor {
 
         this.velocityID = (short) ThreadLocalRandom.current().nextInt(32767);
         this.verifyingVelocity = true;
-        PacketEvents.getAPI().getPlayerUtils().sendPacket(data.getPlayer(), new WrappedPacketOutTransaction(0, velocityID, false));
+
+        PacketEvents.get().getPlayerUtils().sendPacket(data.getPlayer(), new WrappedPacketOutTransaction(0, velocityID, false));
     }
 
     public void handleTransaction(final WrappedPacketInTransaction wrapper) {
@@ -55,7 +54,7 @@ public class VelocityProcessor {
             transactionPing = System.currentTimeMillis() - transactionReply;
 
             transactionID = (short) ThreadLocalRandom.current().nextInt(32767);
-            PacketEvents.getAPI().getPlayerUtils().sendPacket(data.getPlayer(), new WrappedPacketOutTransaction(0, transactionID, false));
+            PacketEvents.get().getPlayerUtils().sendPacket(data.getPlayer(), new WrappedPacketOutTransaction(0, transactionID, false));
             transactionReply = System.currentTimeMillis();
         }
     }
